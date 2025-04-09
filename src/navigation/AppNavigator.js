@@ -9,6 +9,7 @@ import {
   MaterialIcons, 
   FontAwesome5 
 } from '@expo/vector-icons';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Import screens
 import Login from '../screens/Login';
@@ -165,60 +166,62 @@ const MainDrawer = () => {
 // Main navigator
 const AppNavigator = () => {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen 
-          name="Login" 
-          component={Login} 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="Signup" 
-          component={Signup} 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="MainDrawer" 
-          component={MainDrawer} 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="TermsOfService" 
-          component={TermsOfService} 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="PrivacyPolicy" 
-          component={PrivacyPolicy} 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="MyAddresses" 
-          component={MyAddresses} 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="PaymentMethods" 
-          component={PaymentMethods} 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="Notifications" 
-          component={Notifications} 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="HelpSupport" 
-          component={HelpSupport} 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="EditProfile" 
-          component={EditProfile} 
-          options={{ headerShown: false }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName="Login">
+          <Stack.Screen 
+            name="Login" 
+            component={Login} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Signup" 
+            component={Signup} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="MainDrawer" 
+            component={MainDrawer} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="TermsOfService" 
+            component={TermsOfService} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="PrivacyPolicy" 
+            component={PrivacyPolicy} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="MyAddresses" 
+            component={MyAddresses} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="PaymentMethods" 
+            component={PaymentMethods} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Notifications" 
+            component={Notifications} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="HelpSupport" 
+            component={HelpSupport} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="EditProfile" 
+            component={EditProfile} 
+            options={{ headerShown: false }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 };
 

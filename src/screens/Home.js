@@ -8,9 +8,12 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Dimensions,
+  StatusBar as RNStatusBar,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from '../components/Header';
 
 const { width } = Dimensions.get('window');
@@ -106,9 +109,8 @@ const Home = () => {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
-      
+    <View style={styles.container}>
+      <StatusBar style="light" />
       <Header title="KidManila" />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -209,7 +211,7 @@ const Home = () => {
           </View>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

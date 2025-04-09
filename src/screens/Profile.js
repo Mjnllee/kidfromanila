@@ -7,10 +7,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons, FontAwesome, Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
+import Header from '../components/Header';
 
 const ProfileItem = ({ icon, text, iconType = 'Ionicons', onPress }) => {
   const renderIcon = () => {
@@ -41,24 +44,39 @@ const ProfileItem = ({ icon, text, iconType = 'Ionicons', onPress }) => {
 
 const Profile = () => {
   const navigation = useNavigation();
+  const { user, isLoading, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    navigation.navigate('Login');
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF385C" />
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#FFF" barStyle="dark-content" />
-      <ScrollView>
-        <View style={styles.header}>
-          <Text style={styles.headerText}>Profile</Text>
-        </View>
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      <Header title="Profile" />
 
+      <ScrollView>
         <View style={styles.profileHeader}>
           <Image
-            source={require('../../assets/avatar.png')}
+            source={user?.profileImageUrl ? { uri: user.profileImageUrl } : require('../../assets/avatar.png')}
             style={styles.profileImage}
           />
           <View style={styles.profileDetails}>
-            <Text style={styles.profileName}>John Doe</Text>
-            <Text style={styles.profileEmail}>john.doe@example.com</Text>
-            <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('EditProfile')}>
+            <Text style={styles.profileName}>{user?.name || 'Guest User'}</Text>
+            <Text style={styles.profileEmail}>{user?.email || 'guest@example.com'}</Text>
+            <TouchableOpacity 
+              style={styles.editButton} 
+              onPress={() => navigation.navigate('EditProfile', { profile: user })}
+            >
               <Text style={styles.editButtonText}>Edit Profile</Text>
             </TouchableOpacity>
           </View>
@@ -69,7 +87,7 @@ const Profile = () => {
           <ProfileItem 
             icon="person-outline" 
             text="Edit Profile" 
-            onPress={() => navigation.navigate('EditProfile')} 
+            onPress={() => navigation.navigate('EditProfile', { profile: user })} 
           />
           <ProfileItem 
             icon="location-outline" 
@@ -123,7 +141,7 @@ const Profile = () => {
 
         <TouchableOpacity 
           style={styles.logoutButton}
-          onPress={() => navigation.navigate('Login')}
+          onPress={handleLogout}
         >
           <Ionicons name="log-out-outline" size={20} color="#FF385C" />
           <Text style={styles.logoutText}>Log Out</Text>
@@ -133,7 +151,7 @@ const Profile = () => {
           <Text style={styles.versionText}>Version 1.0.0</Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -142,17 +160,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f8f8',
   },
-  header: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    backgroundColor: '#f8f8f8',
   },
   profileHeader: {
     flexDirection: 'row',
@@ -160,6 +172,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     marginBottom: 10,
+    marginTop: 15,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    marginHorizontal: 15,
   },
   profileImage: {
     width: 80,
@@ -194,11 +214,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   section: {
-    marginBottom: 10,
     backgroundColor: '#fff',
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginHorizontal: 16,
+    marginBottom: 15,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    paddingVertical: 10,
+    marginHorizontal: 15,
   },
   sectionTitle: {
     fontSize: 16,
@@ -248,8 +273,8 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   versionText: {
-    fontSize: 12,
     color: '#999',
+    fontSize: 12,
   },
 });
 
