@@ -1,4 +1,5 @@
 import React from 'react';
+import 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -29,6 +30,11 @@ import PaymentMethods from '../screens/PaymentMethods';
 import Notifications from '../screens/Notifications';
 import HelpSupport from '../screens/HelpSupport';
 import EditProfile from '../screens/EditProfile';
+import ProductDetail from '../screens/ProductDetail';
+import Checkout from '../screens/Checkout';
+
+// Import admin navigator
+import AdminNavigator from './AdminNavigator';
 
 // Import custom drawer content
 import DrawerContent from '../components/DrawerContent';
@@ -185,6 +191,16 @@ const AppNavigator = () => {
             options={{ headerShown: false }}
           />
           <Stack.Screen 
+            name="AdminDashboard" 
+            component={AdminNavigator} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="ProductDetail" 
+            component={ProductDetail} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
             name="TermsOfService" 
             component={TermsOfService} 
             options={{ headerShown: false }}
@@ -217,6 +233,11 @@ const AppNavigator = () => {
           <Stack.Screen 
             name="EditProfile" 
             component={EditProfile} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Checkout"
+            component={Checkout}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>

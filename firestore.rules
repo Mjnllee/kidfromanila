@@ -2,19 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users collection - only authenticated users can read their own data
-    match /users/{userId} {
-      // Create: Anyone can create a user document (for registration)
-      // Read: Only the user can read their own data
-      // Update: Only the user can update their own data
-      // Delete: No one can delete user data (for data preservation)
-      allow create: if true;
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false;
-      
-      // In a real production app, you would use Firebase Authentication
-      // and the rules would look like this:
-      // allow read, update: if request.auth != null && request.auth.uid == userId;
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
-} 
+}

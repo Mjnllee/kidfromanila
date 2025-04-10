@@ -17,6 +17,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { ADMIN_USERNAME, ADMIN_PASSWORD } from '@env';
 
 const Login = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -53,6 +54,14 @@ const Login = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (validateForm()) {
+      // Check if admin credentials were provided
+      if (email === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+        // Navigate to Admin Dashboard
+        navigation.navigate('AdminDashboard');
+        return;
+      }
+      
+      // Normal user login
       const success = await login(email, password);
       if (success) {
         navigation.navigate('MainDrawer');
