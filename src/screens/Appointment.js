@@ -36,6 +36,13 @@ const Appointment = () => {
   const [loading, setLoading] = useState(true);
   const [selectedService, setSelectedService] = useState(null);
   const [customDetails, setCustomDetails] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+  const [motorcycleBrand, setMotorcycleBrand] = useState('');
+  const [motorcycleModel, setMotorcycleModel] = useState('');
+  const [plateNumber, setPlateNumber] = useState('');
+  const [preferredDate, setPreferredDate] = useState('');
+  const [preferredTime, setPreferredTime] = useState('');
 
   useEffect(() => {
     fetchAvailableServices();
@@ -97,25 +104,99 @@ const Appointment = () => {
 
         {selectedService && (
           <View style={styles.formContainer}>
-            <Text style={styles.formTitle}>Booking for: {selectedService.name}</Text>
+            <Text style={styles.formTitle}>Service: {selectedService.name}</Text>
 
+            {/* Type of Service* Label and Input for 'Others' service */}
             {selectedService.name === 'Others' && (
-              <TextInput
-                style={styles.input}
-                placeholder="Describe your request..."
-                value={customDetails}
-                onChangeText={setCustomDetails}
-              />
+              <>
+                <Text style={styles.label}>Type of Service*</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Specify the service you need"
+                  value={customDetails}
+                  onChangeText={setCustomDetails}
+                />
+              </>
             )}
 
-            <TextInput style={styles.input} placeholder="Full Name*" />
-            <TextInput style={styles.input} placeholder="Contact Number*" keyboardType="phone-pad" />
-            <TextInput style={styles.input} placeholder="Motorcycle Brand*" />
-            <TextInput style={styles.input} placeholder="Motorcycle Model*" />
-            <TextInput style={styles.input} placeholder="Plate Number*" />
-            <TextInput style={styles.input} placeholder="Preferred Date*" />
-            <TextInput style={styles.input} placeholder="Preferred Time*" />
-            <TextInput style={styles.input} placeholder="Additional Notes" multiline />
+            {/* Full Name */}
+            <Text style={styles.label}>Full Name*</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your full name"
+              value={fullName}
+              onChangeText={setFullName}
+            />
+
+            {/* Contact Number */}
+            <Text style={styles.label}>Phone Number*</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your phone number"
+              keyboardType="phone-pad"
+              value={contactNumber}
+              onChangeText={setContactNumber}
+            />
+
+            {/* Motorcycle Brand */}
+            <Text style={styles.label}>Motorcycle Brand*</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Honda, Yamaha, etc."
+              value={motorcycleBrand}
+              onChangeText={setMotorcycleBrand}
+            />
+
+            {/* Motorcycle Model */}
+            <Text style={styles.label}>Motorcycle Model*</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="CBR 150, MT-15, etc."
+              value={motorcycleModel}
+              onChangeText={setMotorcycleModel}
+            />
+
+            {/* Plate Number */}
+            <Text style={styles.label}>Plate Number*</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter plate number"
+              value={plateNumber}
+              onChangeText={setPlateNumber}
+            />
+
+            {/* Preferred Date and Time */}
+            <View style={styles.dateTimeContainer}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Preferred Date*</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Select date"
+                  value={preferredDate}
+                  onChangeText={setPreferredDate}
+                />
+              </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Preferred Time*</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Select time"
+                  value={preferredTime}
+                  onChangeText={setPreferredTime}
+                />
+              </View>
+            </View>
+
+            {/* Additional Notes */}
+            <Text style={styles.label}>Any special requests or details we should know?</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Any special requests or details?"
+              multiline
+              numberOfLines={4}
+              value={customDetails}
+              onChangeText={setCustomDetails}
+            />
 
             <TouchableOpacity style={styles.submitButton}>
               <Text style={styles.submitButtonText}>Confirm Booking</Text>
@@ -169,11 +250,30 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: '#333',
   },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 6,
+    color: '#333',
+  },
   input: {
     backgroundColor: '#f1f1f1',
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
+  },
+  textArea: {
+    height: 100, // Adjust the height as needed
+    textAlignVertical: 'top', // Ensures the text starts from the top of the text area
+  },
+  dateTimeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  inputContainer: {
+    flex: 1,
   },
   submitButton: {
     backgroundColor: '#E50000',
@@ -190,3 +290,6 @@ const styles = StyleSheet.create({
 });
 
 export default Appointment;
+
+
+
