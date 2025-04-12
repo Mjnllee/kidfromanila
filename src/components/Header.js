@@ -50,7 +50,7 @@ const Header = ({ title, showBackButton = false, hideIcons = false }) => {
           <TouchableOpacity style={styles.headerIconButton}>
             <Ionicons name="cart-outline" size={24} color="white" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconButton}>
+          <TouchableOpacity onPress={() => navigation.navigate('Tawk')} style={styles.headerIconButton}>
             <Ionicons name="chatbubble-ellipses-outline" size={24} color="white" />
           </TouchableOpacity>
         </View>
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 15,
-    paddingBottom: 10,
+    paddingBottom: 20,
   },
   leftSection: {
     flexDirection: 'row',

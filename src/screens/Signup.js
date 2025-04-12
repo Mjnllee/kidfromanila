@@ -32,12 +32,15 @@ const Signup = ({ navigation }) => {
   const [errors, setErrors] = useState({});
   
   // Get auth context
-  const { register, isLoading, error, clearError, isAuthenticated } = useAuth();
+  const { register, isLoading, error, clearError, isAuthenticated, user } = useAuth();
   
   // Navigate to main app if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigation.navigate('MainDrawer');
+    if (isAuthenticated) {  
+      if(user.role === null){
+        navigation.navigate('MainDrawer');
+      }
+      navigation.navigate('EmployeeDashboard')
     }
   }, [isAuthenticated, navigation]);
   

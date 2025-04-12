@@ -38,7 +38,7 @@ const UserForm = ({ route, navigation }) => {
     email: '',
     phone: '',
     password: '',
-    role: '',
+    role: null,
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -51,7 +51,7 @@ const UserForm = ({ route, navigation }) => {
         email: existingUser.email || '',
         phone: existingUser.phone || '',
         password: existingUser.password || '',
-        role: existingUser.role || '',
+        role: existingUser.role || null,
       });
     }
   }, [isEditMode, existingUser]);

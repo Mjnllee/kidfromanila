@@ -100,13 +100,26 @@ const Home = () => {
     }
   };
 
-  const brands = [
-    { name: 'Shinko Tires', image: require('../../assets/shinko.png') },
-    { name: 'Pirelli Tires', image: require('../../assets/pirelli.png') },
-    { name: 'Michelin Tires', image: require('../../assets/michelin.jpg') },
-    { name: 'Eurogrip', image: require('../../assets/eurogrip.png') },
-    { name: 'Motoz', image: require('../../assets/motoz.jpg') },
+  const BRANDS = [
+    { label: "All", value: "" },
+    { label: "Shinko", value: "Shinko" },
+    { label: "Pirelli", value: "Pirelli" },
+    { label: "Motozo", value: "Motozo" },
+    { label: "Eurogrip", value: "Eurogrip" },
+    { label: "Michelin", value: "Michelin" },
   ];
+
+  const brands = [
+    { name: 'Shinko Tires', value: 'Shinko', image: require('../../assets/shinko.png') },
+    { name: 'Pirelli Tires', value: 'Pirelli', image: require('../../assets/pirelli.png') },
+    { name: 'Michelin Tires', value: 'Michelin', image: require('../../assets/michelin.jpg') },
+    { name: 'Eurogrip', value: 'Eurogrip', image: require('../../assets/eurogrip.png') },
+    { name: 'Motoz', value: 'Motozo', image: require('../../assets/motoz.jpg') },
+  ];
+
+  const handleNavigateToBrand = (id) => {
+    navigation.navigate('CategoriesTab', {payload: id})
+  }
 
   return (
     <View style={styles.container}>
@@ -171,7 +184,11 @@ const Home = () => {
             contentContainerStyle={styles.brandsScroll}
           >
             {brands.map((brand, index) => (
-              <TouchableOpacity key={index} style={styles.brandCard}>
+              <TouchableOpacity 
+                key={index} 
+                style={styles.brandCard}
+                onPress={() => handleNavigateToBrand(brand.value)}
+              >
                 <View style={styles.brandImageContainer}>
                   <Image 
                     source={brand.image} 

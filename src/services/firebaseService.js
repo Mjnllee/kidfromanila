@@ -6,7 +6,8 @@ import {
   where, 
   getDocs,
   updateDoc,
-  doc
+  doc,
+  firestore,
 } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -83,6 +84,7 @@ const FirebaseService = {
         gender: userData.gender || '',
         birthdate: userData.birthdate || '',
         profileImageUrl: userData.profileImageUrl || '',
+        role: userData.role,
       };
 
       // Save user session
@@ -103,6 +105,16 @@ const FirebaseService = {
     } catch (error) {
       console.error('Error logging out:', error);
       return { error: 'Logout failed' };
+    }
+  },
+
+  getUserDocument: async (uid) => {
+    try {
+      const doc = await firestore().collection('users').doc(uid).get();
+      return doc.exists ? doc.data() : null;
+    } catch (error) {
+      console.error('Failed to get user document:', error);
+      return null;
     }
   },
 

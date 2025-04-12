@@ -7,9 +7,10 @@ import Inventory from '../screens/admin/Inventory';
 import ProductForm from '../screens/admin/ProductForm';
 import AdminService from '../screens/admin/AdminService';
 import ServiceForm from '../screens/admin/ServiceForm';
+import AdminTransactions from '../screens/admin/AdminTransactions';
 
 // Placeholder empty components for admin screens
-const AdminTransactions = () => <></>;
+// const AdminTransactions = () => <></>;
 const AdminNotifications = () => <></>;
 const AdminReports = () => <></>;
 const AdminQrCode = () => <></>;
@@ -57,7 +58,7 @@ const AdminNavigator = () => {
       <Stack.Screen 
         name="AdminTransactions" 
         component={AdminTransactions} 
-        options={{ title: 'Transactions' }}
+        options={{ headerShown: false  }}
       />
       <Stack.Screen 
         name="AdminNotifications" 

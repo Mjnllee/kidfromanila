@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -12,67 +12,104 @@ import {
   SafeAreaView,
   Modal,
   Switch,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../config/firebase';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../config/firebase";
+import { StatusBar } from "expo-status-bar";
+import Header from "../components/Header";
+import { useFocusEffect } from "@react-navigation/native";
 
-const Categories = ({ navigation }) => {
+const Categories = ({ navigation, route }) => {
+  const payload = route?.params?.payload ?? null;
+  const flatListRef = useRef(null);
+
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Filter modal state
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [priceRange, setPriceRange] = useState({ min: 0, max: 10000 });
   const [selectedBrands, setSelectedBrands] = useState({});
+  const [selectedBrand, setSelectedBrand] = useState('All');
   const [applyingFilters, setApplyingFilters] = useState(false);
 
+  useFocusEffect(
+    useCallback(() => {
+      // screen is focused
+      return () => {
+        setSelectedBrand('All')
+        navigation.setParams({ payload: null });
+      };
+    }, [])
+  );
+
   useEffect(() => {
+    if(payload){
+      setSelectedBrand(payload)
+    }
     fetchProducts();
-  }, []);
+  }, [payload]);
 
   useEffect(() => {
     if (products.length > 0) {
       filterProducts();
     }
-  }, [searchQuery, products, applyingFilters]);
+  }, [searchQuery, products, applyingFilters, selectedBrand]);
+
+  useEffect(() => {
+    if (selectedBrand && flatListRef.current) {
+      const index = BRANDS.findIndex((item) => item.label === selectedBrand);
+      if (index !== -1) {
+        flatListRef.current.scrollToIndex({
+          index,
+          animated: true,
+          viewPosition: 0.5, // center it, optional
+        });
+      }
+    }
+  }, [selectedBrand]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const productsCollection = collection(db, 'products');
+      const productsCollection = collection(db, "products");
       const snapshot = await getDocs(productsCollection);
-      
+
       if (snapshot.empty) {
         setProducts([]);
         setFilteredProducts([]);
         setLoading(false);
         return;
       }
-      
-      const productsList = snapshot.docs.map(doc => ({
+
+      const productsList = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-      
+
       // Extract unique brands for filter
-      const uniqueBrands = [...new Set(productsList.map(product => product.brand).filter(Boolean))];
+      const uniqueBrands = [
+        ...new Set(
+          productsList.map((product) => product.brand).filter(Boolean)
+        ),
+      ];
       setBrands(uniqueBrands);
-      
+
       // Initialize selected brands state
       const initialSelectedBrands = {};
-      uniqueBrands.forEach(brand => {
+      uniqueBrands.forEach((brand) => {
         initialSelectedBrands[brand] = false;
       });
       setSelectedBrands(initialSelectedBrands);
-      
+
       setProducts(productsList);
       setFilteredProducts(productsList);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error("Error fetching products:", error);
     } finally {
       setLoading(false);
     }
@@ -80,130 +117,196 @@ const Categories = ({ navigation }) => {
 
   const filterProducts = () => {
     let filtered = [...products];
-    
+
     // Apply brand filter if any brand is selected
-    const selectedBrandsList = Object.keys(selectedBrands).filter(brand => selectedBrands[brand]);
+    const selectedBrandsList = Object.keys(selectedBrands).filter(
+      (brand) => selectedBrands[brand]
+    );
     if (selectedBrandsList.length > 0) {
-      filtered = filtered.filter(product => selectedBrandsList.includes(product.brand));
+      filtered = filtered.filter((product) =>
+        selectedBrandsList.includes(product.brand)
+      );
     }
-    
+
+    if (selectedBrand && selectedBrand !== "All") {
+      filtered = filtered.filter((product) =>
+        product.brand === selectedBrand
+      );
+    }
+
     // Apply price range filter - only if product has sizes and prices
     if (priceRange.min > 0 || priceRange.max < 10000) {
-      filtered = filtered.filter(product => {
+      filtered = filtered.filter((product) => {
         // Skip price filtering if product has no sizes or prices
         if (!product.sizes || product.sizes.length === 0) return true;
-        
+
         // Check if any size's price falls within the range
-        return product.sizes.some(size => {
+        return product.sizes.some((size) => {
           const price = parseFloat(size.price);
-          return !isNaN(price) && price >= priceRange.min && price <= priceRange.max;
+          return (
+            !isNaN(price) && price >= priceRange.min && price <= priceRange.max
+          );
         });
       });
     }
-    
+
     // Apply search query filter
     if (searchQuery) {
       const lowercasedQuery = searchQuery.toLowerCase();
-      filtered = filtered.filter(product => 
-        product.name?.toLowerCase().includes(lowercasedQuery) || 
-        product.brand?.toLowerCase().includes(lowercasedQuery) ||
-        product.description?.toLowerCase().includes(lowercasedQuery)
+      filtered = filtered.filter(
+        (product) =>
+          product.name?.toLowerCase().includes(lowercasedQuery) ||
+          product.brand?.toLowerCase().includes(lowercasedQuery) ||
+          product.description?.toLowerCase().includes(lowercasedQuery)
       );
     }
-    
+
     setFilteredProducts(filtered);
   };
 
   // Format price to have commas for thousands
   const formatPrice = (price) => {
-    return price ? price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+    return price ? price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : "";
   };
 
   const renderProductItem = ({ item }) => {
     // Get the lowest price for display
-    const lowestPrice = item.sizes && item.sizes.length > 0 
-      ? Math.min(...item.sizes.map(s => parseFloat(s.price) || 0))
-      : null;
-    
+    const lowestPrice =
+      item.sizes && item.sizes.length > 0
+        ? Math.min(...item.sizes.map((s) => parseFloat(s.price) || 0))
+        : null;
+
     return (
-      <View style={styles.productCard}>
-        <View style={styles.productImageContainer}>
-          {item.imageUrl ? (
-            <Image source={{ uri: item.imageUrl }} style={styles.productImage} />
-          ) : (
-            <View style={styles.noImageContainer}>
-              <Ionicons name="image-outline" size={40} color="#ccc" />
-            </View>
-          )}
-        </View>
-        <View style={styles.productInfo}>
-          <Text style={styles.productBrand}>{item.brand} Tires</Text>
-          <Text style={styles.productName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          {lowestPrice && lowestPrice > 0 ? (
-            <Text style={styles.productPrice}>
-              ₱{formatPrice(lowestPrice)}
+      <View style={styles.productContainer}>
+        <View style={styles.productCard}>
+          <View style={styles.productImageContainer}>
+            {item.imageUrl ? (
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={styles.productImage}
+              />
+            ) : (
+              <View style={styles.noImageContainer}>
+                <Ionicons name="image-outline" size={40} color="#ccc" />
+              </View>
+            )}
+          </View>
+          <View style={styles.productInfo}>
+            <Text style={styles.productBrand}>{item.brand} Tires</Text>
+            <Text style={styles.productName} numberOfLines={1}>
+              {item.name}
             </Text>
-          ) : (
-            <Text style={styles.productPrice}>Price not available</Text>
-          )}
-          <TouchableOpacity 
-            style={styles.viewButton}
-            onPress={() => navigation.navigate('ProductDetail', { product: item })}
-          >
-            <Text style={styles.viewButtonText}>View</Text>
-          </TouchableOpacity>
+            {lowestPrice && lowestPrice > 0 ? (
+              <Text style={styles.productPrice}>
+                ₱{formatPrice(lowestPrice)}
+              </Text>
+            ) : (
+              <Text style={styles.productPrice}>Price not available</Text>
+            )}
+            <TouchableOpacity
+              style={styles.viewButton}
+              onPress={() =>
+                navigation.navigate("ProductDetail", { product: item })
+              }
+            >
+              <Text style={styles.viewButtonText}>View</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
   };
-  
+
   const toggleBrand = (brand) => {
     setSelectedBrands({
       ...selectedBrands,
-      [brand]: !selectedBrands[brand]
+      [brand]: !selectedBrands[brand],
     });
   };
-  
+
   const applyFilters = () => {
     setApplyingFilters(!applyingFilters); // Toggle to trigger useEffect
     setFilterModalVisible(false);
   };
-  
+
   const resetFilters = () => {
     setPriceRange({ min: 0, max: 10000 });
-    
+
     const resetBrands = {};
-    Object.keys(selectedBrands).forEach(brand => {
+    Object.keys(selectedBrands).forEach((brand) => {
       resetBrands[brand] = false;
     });
     setSelectedBrands(resetBrands);
   };
 
+  const BRANDS = [
+    { label: "All", value: "" },
+    { label: "Shinko", value: "Shinko" },
+    { label: "Pirelli", value: "Pirelli" },
+    { label: "Motozo", value: "Motozo" },
+    { label: "Eurogrip", value: "Eurogrip" },
+    { label: "Michelin", value: "Michelin" },
+  ];
+
+  const renderBrandList = ({ item }) => {
+    const selected = item.label === selectedBrand;
+    return (
+      <TouchableOpacity
+        onPress={() => {
+          setSelectedBrand(item.label);
+        }}
+        style={styles.brandContainer}
+      >
+        <Text
+          style={{
+            ...styles.brandLabel,
+            backgroundColor: selected ? "red" : "#e2e2e2",
+            color: selected ? "white" : "black",
+          }}
+        >
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>All Products</Text>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.headerIcon}>
-            <Ionicons name="notifications-outline" size={24} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.headerIcon}
-            onPress={() => navigation.navigate('CartTab')}
-          >
-            <Ionicons name="cart-outline" size={24} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIcon}>
-            <Ionicons name="chatbubble-outline" size={24} color="#000" />
-          </TouchableOpacity>
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      <Header title="All Products" />
+      <View
+        style={{
+          width: "100%",
+          borderBottomWidth: 1,
+          borderBottomColor: "#c2c2c2",
+        }}
+      >
+        <View style={{ padding: 12 }}>
+          <Text style={styles.label}>Brands:</Text>
+          <FlatList
+            ref={flatListRef}
+            onScrollToIndexFailed={(info) => {
+              console.warn("Scroll to index failed", info);
+              // fallback attempt
+              flatListRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+            }}
+            renderItem={renderBrandList}
+            data={BRANDS}
+            horizontal
+            contentContainerStyle={{paddingVertical: 12}}
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.label}
+          />
         </View>
       </View>
-
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+          <Ionicons
+            name="search"
+            size={20}
+            color="#999"
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search products..."
@@ -211,39 +314,37 @@ const Categories = ({ navigation }) => {
             onChangeText={setSearchQuery}
           />
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.filterButton}
           onPress={() => setFilterModalVisible(true)}
         >
           <Ionicons name="options-outline" size={20} color="#000" />
         </TouchableOpacity>
       </View>
-      
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#E50000" />
           <Text style={styles.loadingText}>Loading products...</Text>
         </View>
+      ) : filteredProducts.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="sad-outline" size={60} color="#ccc" />
+          <Text style={styles.emptyText}>No products found</Text>
+          <Text style={styles.emptySubText}>
+            Try adjusting your filters or search terms
+          </Text>
+        </View>
       ) : (
-        filteredProducts.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="sad-outline" size={60} color="#ccc" />
-            <Text style={styles.emptyText}>No products found</Text>
-            <Text style={styles.emptySubText}>
-              Try adjusting your filters or search terms
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={filteredProducts}
-            renderItem={renderProductItem}
-            keyExtractor={item => item.id}
-            numColumns={2}
-            contentContainerStyle={styles.productsContainer}
-          />
-        )
+        <FlatList
+          data={filteredProducts}
+          renderItem={renderProductItem}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          contentContainerStyle={styles.productsContainer}
+        />
       )}
-      
+
       {/* Filter Modal */}
       <Modal
         visible={filterModalVisible}
@@ -259,7 +360,7 @@ const Categories = ({ navigation }) => {
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-            
+
             {/* Price Range */}
             <View style={styles.filterSection}>
               <Text style={styles.filterSectionTitle}>Price Range</Text>
@@ -268,9 +369,14 @@ const Categories = ({ navigation }) => {
                   <Text style={styles.priceInputLabel}>Min</Text>
                   <View style={styles.priceInput}>
                     <Text style={styles.pesoCurrency}>₱</Text>
-                    <TextInput 
+                    <TextInput
                       value={priceRange.min.toString()}
-                      onChangeText={(text) => setPriceRange({...priceRange, min: parseInt(text) || 0})}
+                      onChangeText={(text) =>
+                        setPriceRange({
+                          ...priceRange,
+                          min: parseInt(text) || 0,
+                        })
+                      }
                       style={styles.priceInputText}
                       keyboardType="numeric"
                     />
@@ -281,9 +387,14 @@ const Categories = ({ navigation }) => {
                   <Text style={styles.priceInputLabel}>Max</Text>
                   <View style={styles.priceInput}>
                     <Text style={styles.pesoCurrency}>₱</Text>
-                    <TextInput 
+                    <TextInput
                       value={priceRange.max.toString()}
-                      onChangeText={(text) => setPriceRange({...priceRange, max: parseInt(text) || 0})}
+                      onChangeText={(text) =>
+                        setPriceRange({
+                          ...priceRange,
+                          max: parseInt(text) || 0,
+                        })
+                      }
                       style={styles.priceInputText}
                       keyboardType="numeric"
                     />
@@ -291,38 +402,42 @@ const Categories = ({ navigation }) => {
                 </View>
               </View>
             </View>
-            
+
             {/* Brands */}
-            <View style={styles.filterSection}>
+            {/* <View style={styles.filterSection}>
               <Text style={styles.filterSectionTitle}>Brands</Text>
               <ScrollView style={styles.brandFilterList}>
                 {brands.map((brand) => (
-                  <TouchableOpacity 
-                    key={brand} 
+                  <TouchableOpacity
+                    key={brand}
                     style={styles.brandFilterItem}
                     onPress={() => toggleBrand(brand)}
                   >
-                    <View style={[
-                      styles.checkbox, 
-                      selectedBrands[brand] && styles.checkboxSelected
-                    ]}>
-                      {selectedBrands[brand] && <Ionicons name="checkmark" size={16} color="white" />}
+                    <View
+                      style={[
+                        styles.checkbox,
+                        selectedBrands[brand] && styles.checkboxSelected,
+                      ]}
+                    >
+                      {selectedBrands[brand] && (
+                        <Ionicons name="checkmark" size={16} color="white" />
+                      )}
                     </View>
                     <Text style={styles.brandFilterText}>{brand}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
-            </View>
-            
+            </View> */}
+
             {/* Filter Actions */}
             <View style={styles.filterActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.resetButton}
                 onPress={resetFilters}
               >
                 <Text style={styles.resetButtonText}>Reset</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.applyButton}
                 onPress={applyFilters}
               >
@@ -332,55 +447,55 @@ const Categories = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'white',
+    backgroundColor: "black",
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: "bold",
+    color: "#fff",
   },
   headerIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   headerIcon: {
     marginLeft: 16,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
   },
   searchBar: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: "#eee",
   },
   searchIcon: {
     marginRight: 8,
@@ -393,170 +508,190 @@ const styles = StyleSheet.create({
   filterButton: {
     width: 40,
     height: 40,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: "#eee",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#999',
+    fontWeight: "bold",
+    color: "#999",
     marginTop: 16,
     marginBottom: 8,
   },
+  brandContainer: {
+    paddingHorizontal: 3,
+  },
+  brandLabel: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 100,
+  },
   emptySubText: {
     fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
+    color: "#999",
+    textAlign: "center",
     paddingHorizontal: 32,
   },
   productsContainer: {
     padding: 8,
   },
-  productCard: {
+  productContainer: {
     flex: 1,
+  },
+  productCard: {
     margin: 8,
-    backgroundColor: 'white',
-    borderRadius: 4,
-    overflow: 'hidden',
+    backgroundColor: "white",
+    borderRadius: 8,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "grey",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.5,
     shadowRadius: 2,
   },
   productImageContainer: {
     height: 140,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     padding: 8,
   },
   productImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain",
   },
   noImageContainer: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
   },
   productInfo: {
     padding: 12,
   },
   productBrand: {
     fontSize: 12,
-    color: '#E50000',
+    color: "#E50000",
     marginBottom: 4,
   },
   productName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: "bold",
+    color: "#000",
     marginBottom: 4,
   },
   productPrice: {
     fontSize: 16,
-    color: '#E50000',
-    fontWeight: 'bold',
+    color: "#E50000",
+    fontWeight: "bold",
     marginBottom: 8,
   },
   viewButton: {
-    backgroundColor: '#E50000',
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    borderTopLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    backgroundColor: "#E50000",
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-end',
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "flex-end",
   },
   viewButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
-  
+
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    maxHeight: '80%',
+    maxHeight: "80%",
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 8,
+    color: "#333",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   filterSection: {
     marginBottom: 20,
   },
   filterSectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 12,
   },
   priceInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   priceInputWrapper: {
-    width: '45%',
+    width: "45%",
   },
   priceInputLabel: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 8,
   },
   priceInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 10,
     height: 44,
   },
   pesoCurrency: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginRight: 4,
   },
   priceInputText: {
@@ -565,71 +700,71 @@ const styles = StyleSheet.create({
   },
   priceSeparator: {
     fontSize: 20,
-    color: '#666',
+    color: "#666",
     paddingHorizontal: 10,
   },
   brandFilterList: {
     maxHeight: 200,
   },
   brandFilterItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   checkbox: {
     width: 24,
     height: 24,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   checkboxSelected: {
-    backgroundColor: '#E50000',
-    borderColor: '#E50000',
+    backgroundColor: "#E50000",
+    borderColor: "#E50000",
   },
   brandFilterText: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   filterActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 20,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: "#eee",
   },
   resetButton: {
     flex: 1,
     paddingVertical: 12,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   resetButtonText: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   applyButton: {
     flex: 1,
     paddingVertical: 12,
     marginLeft: 8,
-    backgroundColor: '#E50000',
+    backgroundColor: "#E50000",
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   applyButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
   },
 });
 
-export default Categories; 
+export default Categories;

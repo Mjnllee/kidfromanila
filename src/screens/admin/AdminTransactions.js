@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
   TextInput,
   Modal,
   ScrollView,
@@ -24,6 +23,7 @@ import {
   getDoc,
   serverTimestamp 
 } from 'firebase/firestore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Order statuses and their corresponding colors
 const ORDER_STATUSES = {
@@ -35,6 +35,7 @@ const ORDER_STATUSES = {
 };
 
 const AdminTransactions = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,9 +52,9 @@ const AdminTransactions = ({ navigation }) => {
     delivered: 0,
     cancelled: 0
   });
-
   useEffect(() => {
     fetchOrders();
+    
   }, []);
 
   useEffect(() => {
@@ -166,6 +167,39 @@ const AdminTransactions = ({ navigation }) => {
     );
   };
 
+  const formatAppointmentDateTime = (dateStr, timeStr) => {
+    if (!dateStr || !timeStr) return '';
+  
+    const [month, day, year] = dateStr.split('-').map(Number);
+    const [hourStr, minuteStr] = timeStr.split(':');
+  
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+  
+    const dateObj = new Date(year, month - 1, day);
+  
+    // Ensure valid date
+    if (isNaN(dateObj.getTime())) return `${dateStr} ${timeStr}`;
+  
+    let hour = parseInt(hourStr, 10);
+    const minute = minuteStr.padStart(2, '0');
+    let ampm = 'AM';
+  
+    if (hour >= 12) {
+      ampm = 'PM';
+      if (hour > 12) hour -= 12;
+    } else if (hour === 0) {
+      hour = 12;
+    }
+  
+    const monthLabel = months[month - 1] || '???';
+  
+    return `${monthLabel}-${String(day).padStart(2, '0')}-${year} ${String(hour).padStart(2, '0')}:${minute} ${ampm}`;
+  };
+  
+
   const renderOrderActions = (order) => {
     if (processingOrderId === order.id) {
       return <ActivityIndicator size="small" color="#E50000" />;
@@ -247,6 +281,12 @@ const AdminTransactions = ({ navigation }) => {
             {item.paymentMethod?.charAt(0).toUpperCase() + item.paymentMethod?.slice(1) || 'Unknown'}
           </Text>
         </View>
+        {item.appointment && item.appointment.date && <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Appointment:</Text>
+          <Text style={styles.infoValue}>
+          {formatAppointmentDateTime(item.appointment.date, item.appointment.time)}
+          </Text>
+        </View>}
       </View>
 
       <View style={styles.orderActions}>
@@ -256,8 +296,8 @@ const AdminTransactions = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <View style={[styles.header, {paddingTop: insets.top}]}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -354,7 +394,7 @@ const AdminTransactions = ({ navigation }) => {
           }}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -557,7 +597,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    paddingTop: 50,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -607,15 +646,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     marginRight: 8,
+    marginBottom: 20,
     backgroundColor: 'white',
+    height: 38,
+    width: 145,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statusTabActive: {
     backgroundColor: '#f0f0f0',
     borderWidth: 1,
+    
   },
   statusTabText: {
     fontSize: 14,
     color: '#777',
+    textAlign: 'center',
   },
   statusTabTextActive: {
     fontWeight: 'bold',
@@ -676,7 +722,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 14,
     color: '#777',
-    width: 80,
+    width: 120,
   },
   infoValue: {
     fontSize: 14,
@@ -704,6 +750,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 14,
+    
   },
   loadingContainer: {
     flex: 1,

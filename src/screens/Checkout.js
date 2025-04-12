@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,33 +10,40 @@ import {
   Alert,
   Modal,
   FlatList,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../contexts/AuthContext';
-import { db } from '../config/firebase';
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
+  TextInput,
+  KeyboardAvoidingView,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../contexts/AuthContext";
+import { db } from "../config/firebase";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
   addDoc,
   deleteDoc,
   query,
   where,
-  serverTimestamp 
-} from 'firebase/firestore';
+  serverTimestamp,
+} from "firebase/firestore";
 
 const PAYMENT_METHODS = [
-  { id: 'cash', name: 'Cash on Delivery', icon: 'cash-outline' },
-  { id: 'gcash', name: 'GCash', icon: 'wallet-outline' },
-  { id: 'maya', name: 'Maya', icon: 'card-outline' },
-  { id: 'paypal', name: 'PayPal', icon: 'logo-paypal' },
-  { id: 'card', name: 'Credit/Debit Card', icon: 'card-outline' },
+  { id: "cash", name: "Cash on Delivery", icon: "cash-outline" },
+  { id: "gcash", name: "GCash", icon: "wallet-outline" },
+  { id: "maya", name: "Maya", icon: "card-outline" },
+  { id: "paypal", name: "PayPal", icon: "logo-paypal" },
+  { id: "card", name: "Credit/Debit Card", icon: "card-outline" },
 ];
 
 const Checkout = ({ route, navigation }) => {
   const { user } = useAuth();
-  const { cartItems, totalPrice } = route.params || { cartItems: [], totalPrice: 0 };
+  const { cartItems, totalPrice, appointmentData } = route.params || {
+    cartItems: [],
+    totalPrice: 0,
+  };
+
+  
 
   const [loading, setLoading] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -44,13 +51,13 @@ const Checkout = ({ route, navigation }) => {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [selectedPayment, setSelectedPayment] = useState(PAYMENT_METHODS[0].id);
   const [addressModalVisible, setAddressModalVisible] = useState(false);
-
+  
   useEffect(() => {
     if (user) {
       fetchAddresses();
     } else {
-      Alert.alert('Login Required', 'Please log in to checkout.');
-      navigation.navigate('Login');
+      Alert.alert("Login Required", "Please log in to checkout.");
+      navigation.navigate("Login");
     }
   }, [user]);
 
@@ -59,20 +66,22 @@ const Checkout = ({ route, navigation }) => {
       setLoading(true);
       const addressesRef = collection(db, `users/${user.id}/addresses`);
       const snapshot = await getDocs(addressesRef);
-      
-      const addressList = snapshot.docs.map(doc => ({
+
+      const addressList = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-      
+
       setAddresses(addressList);
-      
+
       // Select the default address or the first one in the list
-      const defaultAddress = addressList.find(addr => addr.isDefault);
-      setSelectedAddress(defaultAddress || (addressList.length > 0 ? addressList[0] : null));
+      const defaultAddress = addressList.find((addr) => addr.isDefault);
+      setSelectedAddress(
+        defaultAddress || (addressList.length > 0 ? addressList[0] : null)
+      );
     } catch (error) {
-      console.error('Error fetching addresses:', error);
-      Alert.alert('Error', 'Failed to load your addresses.');
+      console.error("Error fetching addresses:", error);
+      Alert.alert("Error", "Failed to load your addresses.");
     } finally {
       setLoading(false);
     }
@@ -85,12 +94,15 @@ const Checkout = ({ route, navigation }) => {
 
   const placeOrder = async () => {
     if (!selectedAddress) {
-      Alert.alert('Address Required', 'Please select a shipping address.');
+      Alert.alert("Address Required", "Please select a shipping address.");
       return;
     }
 
     if (cartItems.length === 0) {
-      Alert.alert('Empty Cart', 'Your cart is empty. Add items before checking out.');
+      Alert.alert(
+        "Empty Cart",
+        "Your cart is empty. Add items before checking out."
+      );
       return;
     }
 
@@ -104,61 +116,78 @@ const Checkout = ({ route, navigation }) => {
         shippingAddress: selectedAddress,
         paymentMethod: selectedPayment,
         total: totalPrice,
-        status: 'pending',
+        status: "pending",
+        appointment: {
+          date: appointmentData.date || null,
+          time: appointmentData.time || null,
+        },
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
 
       // Add order to Firestore
-      const orderRef = await addDoc(collection(db, 'orders'), orderData);
+      const orderRef = await addDoc(collection(db, "orders"), orderData);
 
       // Clear the user's cart
-      await deleteDoc(doc(db, 'carts', user.id));
+      await deleteDoc(doc(db, "carts", user.id));
 
       // Show success and navigate back
       Alert.alert(
-        'Order Placed Successfully!',
-        `Your order #${orderRef.id.slice(-6)} has been placed and is pending approval.`,
+        "Order Placed Successfully!",
+        `Your order #${orderRef.id.slice(
+          -6
+        )} has been placed and is pending approval.`,
         [
           {
-            text: 'OK',
-            onPress: () => navigation.reset({
-              index: 0,
-              routes: [{ name: 'MainDrawer' }],
-            })
-          }
+            text: "OK",
+            onPress: () =>
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "MainDrawer" }],
+              }),
+          },
         ]
       );
     } catch (error) {
-      console.error('Error placing order:', error);
-      Alert.alert('Error', 'Failed to place your order. Please try again.');
+      console.error("Error placing order:", error);
+      Alert.alert("Error", "Failed to place your order. Please try again.");
     } finally {
       setPlacingOrder(false);
     }
   };
 
   const renderAddressItem = ({ item }) => (
-    <TouchableOpacity 
-      style={[styles.addressItem, selectedAddress?.id === item.id && styles.selectedAddressItem]}
+    <TouchableOpacity
+      style={[
+        styles.addressItem,
+        selectedAddress?.id === item.id && styles.selectedAddressItem,
+      ]}
       onPress={() => handleAddressSelect(item)}
     >
       <View style={styles.addressHeader}>
         <Text style={styles.addressType}>{item.type}</Text>
-        {item.isDefault && <View style={styles.defaultBadge}><Text style={styles.defaultText}>Default</Text></View>}
+        {item.isDefault && (
+          <View style={styles.defaultBadge}>
+            <Text style={styles.defaultText}>Default</Text>
+          </View>
+        )}
       </View>
       <Text style={styles.addressName}>{item.name}</Text>
       <Text style={styles.addressText}>{item.street}</Text>
-      <Text style={styles.addressText}>{item.city}, {item.state} {item.zipCode}</Text>
+      <Text style={styles.addressText}>
+        {item.city}, {item.state} {item.zipCode}
+      </Text>
       <Text style={styles.addressText}>{item.country}</Text>
       <Text style={styles.addressPhone}>{item.phone}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView behavior="height" style={{flex: 1}}>
+    <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Ionicons name="arrow-back" size={24} color="#333" />
@@ -178,7 +207,7 @@ const Checkout = ({ route, navigation }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Shipping Address</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.changeButton}
                 onPress={() => setAddressModalVisible(true)}
               >
@@ -192,18 +221,23 @@ const Checkout = ({ route, navigation }) => {
                 <Text style={styles.addressName}>{selectedAddress.name}</Text>
                 <Text style={styles.addressText}>{selectedAddress.street}</Text>
                 <Text style={styles.addressText}>
-                  {selectedAddress.city}, {selectedAddress.state} {selectedAddress.zipCode}
+                  {selectedAddress.city}, {selectedAddress.state}{" "}
+                  {selectedAddress.zipCode}
                 </Text>
-                <Text style={styles.addressText}>{selectedAddress.country}</Text>
+                <Text style={styles.addressText}>
+                  {selectedAddress.country}
+                </Text>
                 <Text style={styles.addressPhone}>{selectedAddress.phone}</Text>
               </View>
             ) : (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.addAddressButton}
-                onPress={() => navigation.navigate('MyAddresses')}
+                onPress={() => navigation.navigate("MyAddresses")}
               >
                 <Ionicons name="add-circle-outline" size={20} color="#E50000" />
-                <Text style={styles.addAddressText}>Add a shipping address</Text>
+                <Text style={styles.addAddressText}>
+                  Add a shipping address
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -211,13 +245,13 @@ const Checkout = ({ route, navigation }) => {
           {/* Payment Method Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Payment Method</Text>
-            
+
             {PAYMENT_METHODS.map((method) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={method.id}
                 style={[
                   styles.paymentMethod,
-                  selectedPayment === method.id && styles.selectedPaymentMethod
+                  selectedPayment === method.id && styles.selectedPaymentMethod,
                 ]}
                 onPress={() => setSelectedPayment(method.id)}
               >
@@ -235,7 +269,7 @@ const Checkout = ({ route, navigation }) => {
           {/* Order Summary Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Order Summary</Text>
-            
+
             {cartItems.map((item, index) => (
               <View key={index} style={styles.orderItem}>
                 <View style={styles.orderItemInfo}>
@@ -244,22 +278,24 @@ const Checkout = ({ route, navigation }) => {
                     Size: {item.size} · Qty: {item.quantity}
                   </Text>
                 </View>
-                <Text style={styles.orderItemPrice}>₱{item.price * item.quantity}</Text>
+                <Text style={styles.orderItemPrice}>
+                  ₱{item.price * item.quantity}
+                </Text>
               </View>
             ))}
 
             <View style={styles.divider} />
-            
+
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal</Text>
               <Text style={styles.summaryValue}>₱{totalPrice}</Text>
             </View>
-            
+
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Shipping</Text>
               <Text style={styles.summaryValue}>Free</Text>
             </View>
-            
+
             <View style={styles.summaryRow}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalPrice}>₱{totalPrice}</Text>
@@ -270,7 +306,7 @@ const Checkout = ({ route, navigation }) => {
 
       {!loading && (
         <View style={styles.footer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.placeOrderButton}
             onPress={placeOrder}
             disabled={placingOrder || !selectedAddress}
@@ -295,7 +331,7 @@ const Checkout = ({ route, navigation }) => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Address</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setAddressModalVisible(false)}
               >
@@ -307,20 +343,22 @@ const Checkout = ({ route, navigation }) => {
               <FlatList
                 data={addresses}
                 renderItem={renderAddressItem}
-                keyExtractor={item => item.id}
+                keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.addressList}
               />
             ) : (
               <View style={styles.emptyAddresses}>
-                <Text style={styles.emptyAddressesText}>No saved addresses found</Text>
+                <Text style={styles.emptyAddressesText}>
+                  No saved addresses found
+                </Text>
               </View>
             )}
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addNewAddressButton}
               onPress={() => {
                 setAddressModalVisible(false);
-                navigation.navigate('MyAddresses');
+                navigation.navigate("MyAddresses");
               }}
             >
               <Ionicons name="add-circle-outline" size={20} color="#fff" />
@@ -329,144 +367,145 @@ const Checkout = ({ route, navigation }) => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
     paddingTop: 50,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   content: {
     flex: 1,
   },
   section: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 8,
     padding: 16,
     marginHorizontal: 16,
-    marginTop: 16,
-    shadowColor: '#000',
+    marginVertical: 16,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 16,
   },
   changeButton: {
     padding: 4,
   },
   changeButtonText: {
-    color: '#E50000',
+    color: "#E50000",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   selectedAddress: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
   },
   addressType: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#555',
+    fontWeight: "500",
+    color: "#555",
     marginBottom: 4,
   },
   addressName: {
     fontSize: 15,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 4,
   },
   addressText: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 2,
   },
   addressPhone: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginTop: 4,
   },
   addAddressButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 12,
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#ccc',
+    borderStyle: "dashed",
+    borderColor: "#ccc",
     borderRadius: 8,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   addAddressText: {
-    color: '#E50000',
+    color: "#E50000",
     marginLeft: 8,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   paymentMethod: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     borderRadius: 8,
     marginBottom: 12,
   },
   selectedPaymentMethod: {
-    borderColor: '#E50000',
-    backgroundColor: '#FFF5F5',
+    borderColor: "#E50000",
+    backgroundColor: "#FFF5F5",
   },
   paymentIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   paymentName: {
     flex: 1,
     fontSize: 15,
-    color: '#333',
+    color: "#333",
   },
   orderItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   orderItemInfo: {
@@ -474,100 +513,100 @@ const styles = StyleSheet.create({
   },
   orderItemName: {
     fontSize: 15,
-    color: '#333',
-    fontWeight: '500',
+    color: "#333",
+    fontWeight: "500",
   },
   orderItemDetails: {
     fontSize: 13,
-    color: '#777',
+    color: "#777",
     marginTop: 2,
   },
   orderItemPrice: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
   },
   divider: {
     height: 1,
-    backgroundColor: '#eee',
+    backgroundColor: "#eee",
     marginVertical: 12,
   },
   summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#777',
+    color: "#777",
   },
   summaryValue: {
     fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
+    color: "#333",
+    fontWeight: "500",
   },
   totalLabel: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   totalPrice: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#E50000',
+    fontWeight: "bold",
+    color: "#E50000",
   },
   footer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: "#eee",
   },
   placeOrderButton: {
-    backgroundColor: '#E50000',
+    backgroundColor: "#E50000",
     borderRadius: 8,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   placeOrderButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#777',
+    color: "#777",
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingBottom: 24,
-    maxHeight: '80%',
+    maxHeight: "80%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   closeButton: {
     padding: 8,
@@ -579,22 +618,22 @@ const styles = StyleSheet.create({
   },
   addressItem: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
   },
   selectedAddressItem: {
-    borderColor: '#E50000',
-    backgroundColor: '#FFF5F5',
+    borderColor: "#E50000",
+    backgroundColor: "#FFF5F5",
   },
   addressHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
   defaultBadge: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: "#E8F5E9",
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -602,36 +641,36 @@ const styles = StyleSheet.create({
   },
   defaultText: {
     fontSize: 12,
-    color: '#4CAF50',
-    fontWeight: '500',
+    color: "#4CAF50",
+    fontWeight: "500",
   },
   emptyAddresses: {
     padding: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   emptyAddressesText: {
     fontSize: 16,
-    color: '#777',
-    textAlign: 'center',
+    color: "#777",
+    textAlign: "center",
   },
   addNewAddressButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 24,
     left: 16,
     right: 16,
-    flexDirection: 'row',
-    backgroundColor: '#E50000',
+    flexDirection: "row",
+    backgroundColor: "#E50000",
     borderRadius: 8,
     paddingVertical: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   addNewAddressText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginLeft: 8,
   },
 });
 
-export default Checkout; 
+export default Checkout;

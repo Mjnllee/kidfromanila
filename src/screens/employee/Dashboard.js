@@ -11,15 +11,14 @@ import {
 import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 
-const AdminDashboard = ({ navigation }) => {
+const EmployeeDashBoard = ({ navigation }) => {
   const menuItems = [
-    { id: 1, title: 'Human Resources', icon: 'people', type: 'ion', route: 'AdminHumanResources' },
-    { id: 2, title: 'Inventory Management', icon: 'inventory', type: 'material', route: 'AdminInventory' },
-    { id: 3, title: 'Service Management', icon: 'build', type: 'material', route: 'AdminService' },
-    { id: 4, title: 'Transactions', icon: 'attach-money', type: 'material', route: 'AdminTransactions' },
-    { id: 5, title: 'Notifications', icon: 'notifications', type: 'ion', route: 'AdminNotifications' },
-    { id: 6, title: 'Reports & Analytics', icon: 'bar-chart', type: 'ion', route: 'AdminReports' },
-    { id: 7, title: 'QR Code Scanning', icon: 'qrcode', type: 'font-awesome', route: 'AdminQrCode' },
+    { id: 1, title: 'Analytics', icon: 'analytics', type: 'ion', route: 'EmployeeAnalytics' },
+    { id: 2, title: 'Orders', icon: 'shopping-bag', type: 'material', route: 'EmployeeOrders' },
+    { id: 3, title: 'Transactions', icon: 'attach-money', type: 'material', route: 'EmployeeTransactions' },
+    { id: 4, title: 'Notifications', icon: 'notifications', type: 'material', route: 'EmployeeNotifications' },
+    { id: 5, title: 'Account Settings', icon: 'build', type: 'ion', route: 'EmployeeAccountSettings' },
+    { id: 6, title: 'QR Code Scannings', icon: 'qr-code', type: 'ion', route: 'EmployeeQRCodeScanning' },
   ];
 
   const renderIcon = (item) => {
@@ -51,7 +50,7 @@ const AdminDashboard = ({ navigation }) => {
       <StatusBar style="dark" />
       
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Admin Dashboard</Text>
+        <Text style={styles.headerTitle}>Employee Dashboard</Text>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#E50000" />
           <Text style={styles.logoutText}>Logout</Text>
@@ -150,4 +149,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AdminDashboard; 
+export default EmployeeDashBoard; 

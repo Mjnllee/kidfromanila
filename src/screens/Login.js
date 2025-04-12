@@ -25,12 +25,16 @@ const Login = ({ navigation }) => {
   const [errors, setErrors] = useState({});
   
   // Get auth context
-  const { login, isLoading, error, clearError, isAuthenticated } = useAuth();
+  const { login, isLoading, error, clearError, isAuthenticated, user } = useAuth();
   
   // Navigate to main app if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigation.navigate('MainDrawer');
+      if(user.role === null){
+        navigation.navigate('MainDrawer');
+      } else {
+        navigation.navigate('EmployeeDashboard')
+      }
     }
   }, [isAuthenticated, navigation]);
   
@@ -53,18 +57,17 @@ const Login = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
+    if (email === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      navigation.navigate('AdminDashboard');
+      return;
+    }
     if (validateForm()) {
-      // Check if admin credentials were provided
-      if (email === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        // Navigate to Admin Dashboard
-        navigation.navigate('AdminDashboard');
-        return;
-      }
-      
-      // Normal user login
-      const success = await login(email, password);
-      if (success) {
-        navigation.navigate('MainDrawer');
+      const res = await login(email, password);
+      if (res.success) {
+        if(res.user.role === null){
+          navigation.navigate('MainDrawer');
+        }
+        navigation.navigate('EmployeeDashboard')
       }
     }
   };

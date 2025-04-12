@@ -9,11 +9,13 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Header from '../components/Header';
 import { db } from '../config/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
+import { useIsFocused } from '@react-navigation/native';  // Importing useIsFocused
 
 const standardServices = [
   { id: 'std1', name: 'Wheel balance', price: '500' },
@@ -44,9 +46,17 @@ const Appointment = () => {
   const [preferredDate, setPreferredDate] = useState('');
   const [preferredTime, setPreferredTime] = useState('');
 
+  const isFocused = useIsFocused();  // Detect if the screen is focused
+
   useEffect(() => {
     fetchAvailableServices();
   }, []);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setSelectedService(null); // Reset selectedService when navigating away
+    }
+  }, [isFocused]);  // When the screen focus changes
 
   const fetchAvailableServices = async () => {
     try {
@@ -71,9 +81,56 @@ const Appointment = () => {
   const handleServicePress = (service) => {
     setSelectedService(service);
   };
+  const submitServiceAppointment = async () => {
+    // Validation for empty fields
+    if (
+      !selectedService ||
+      !fullName.trim() ||
+      !contactNumber.trim() ||
+      !motorcycleBrand.trim() ||
+      !motorcycleModel.trim() ||
+      !plateNumber.trim() ||
+      !preferredDate.trim() ||
+      !preferredTime.trim() ||
+      (selectedService.name === 'Others' && !customDetails.trim())
+    ) {
+      Alert.alert('Error', 'All fields are required');
+      return { success: false };
+    }
+  
+    const appointmentData = {
+      serviceName: selectedService,
+      isCustom: selectedService === 'Others',
+      customDetails: customDetails || '',
+      fullName: fullName,
+      contactNumber: contactNumber,
+      motorcycleBrand: motorcycleBrand,
+      motorcycleModel: motorcycleModel,
+      plateNumber: plateNumber,
+      preferredDate: preferredDate,
+      preferredTime: preferredTime,
+      createdAt: serverTimestamp(),
+    };
+  
+    try {
+      const docRef = await addDoc(collection(db, 'appointments'), appointmentData);
+      console.log('Appointment booked with ID:', docRef.id);
+      Alert.alert('Success', 'Your appointment has been booked!');
+      return { success: true, id: docRef.id };
+    } catch (error) {
+      console.error('Error saving appointment:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+      return { success: false, error };
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView
+      behavior="height"
+      style={{flex: 1}}
+
+    >
+    <View style={styles.container}>
       <StatusBar style="dark" />
       <Header title="Book a Service" />
 
@@ -198,13 +255,14 @@ const Appointment = () => {
               onChangeText={setCustomDetails}
             />
 
-            <TouchableOpacity style={styles.submitButton}>
+            <TouchableOpacity onPress={submitServiceAppointment} style={styles.submitButton}>
               <Text style={styles.submitButtonText}>Confirm Booking</Text>
             </TouchableOpacity>
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -230,6 +288,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    paddingBottom: 12,
   },
   serviceTitle: { fontSize: 16, color: '#000', fontWeight: '500' },
   servicePrice: { fontSize: 16, color: '#FF0000', fontWeight: '500' },
@@ -281,6 +340,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 8,
+    marginBottom: 12,
   },
   submitButtonText: {
     color: '#fff',
@@ -290,6 +350,3 @@ const styles = StyleSheet.create({
 });
 
 export default Appointment;
-
-
-

@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       setUser(result.user);
-      return true;
+      return {success: true, user: result.user};
     } catch (error) {
       setError('Login failed. Please try again.');
       return false;

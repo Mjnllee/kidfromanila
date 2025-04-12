@@ -1,5 +1,4 @@
 import React from 'react';
-import 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -32,12 +31,13 @@ import HelpSupport from '../screens/HelpSupport';
 import EditProfile from '../screens/EditProfile';
 import ProductDetail from '../screens/ProductDetail';
 import Checkout from '../screens/Checkout';
-
+import ChatSupport from '../screens/ChatSupport';
 // Import admin navigator
 import AdminNavigator from './AdminNavigator';
 
 // Import custom drawer content
 import DrawerContent from '../components/DrawerContent';
+import EmployeeNavigator from './EmployeeNavigator';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -196,6 +196,11 @@ const AppNavigator = () => {
             options={{ headerShown: false }}
           />
           <Stack.Screen 
+            name="EmployeeDashboard" 
+            component={EmployeeNavigator} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
             name="ProductDetail" 
             component={ProductDetail} 
             options={{ headerShown: false }}
@@ -239,6 +244,11 @@ const AppNavigator = () => {
             name="Checkout"
             component={Checkout}
             options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Tawk" 
+            component={ChatSupport} 
+            options={{ headerShown: false, presentation: 'modal' }}
           />
         </Stack.Navigator>
       </NavigationContainer>
